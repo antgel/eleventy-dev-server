@@ -27,6 +27,7 @@ const DEFAULT_OPTIONS = {
   pathPrefix: "/",      // May be overridden by Eleventy, adds a virtual base directory to your project
   watch: [],            // Globs to pass to separate dev server chokidar for watching
   aliases: {},          // Aliasing feature
+  rebuildUrl: null,     // POST URL to trigger rebuild
 
   // Logger (fancier one is injected by Eleventy)
   logger: {
@@ -77,6 +78,10 @@ class EleventyDevServer {
     }
 
     this.options.pathPrefix = this.cleanupPathPrefix(this.options.pathPrefix);
+  }
+
+  setEventBus(_eventBus) {
+    this.eventBus = _eventBus;
   }
 
   get watcher() {
@@ -415,6 +420,12 @@ class EleventyDevServer {
   }
 
   eleventyDevServerMiddleware(req, res, next) {
+    if (this.options.rebuildUrl && req.url === this.options.rebuildUrl && req.method === 'POST') {
+      this.eventBus.emit('eleventyDevServer.rebuild');
+      res.writeHead(200);
+      return res.end();
+    }
+
     if(req.url === `/${this.options.injectedScriptsFolder}/reload-client.js`) {
       if(this.options.liveReload) {
         res.setHeader("Content-Type", mime.getType("js"));
