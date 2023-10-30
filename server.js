@@ -28,6 +28,7 @@ const DEFAULT_OPTIONS = {
   watch: [],            // Globs to pass to separate dev server chokidar for watching
   aliases: {},          // Aliasing feature
   rebuildUrl: null,     // POST URL to trigger rebuild
+  rebuildUrlToken: "",  // Secret token in x-11ty-rebuild-token header
 
   // Logger (fancier one is injected by Eleventy)
   logger: {
@@ -421,6 +422,12 @@ class EleventyDevServer {
 
   eleventyDevServerMiddleware(req, res, next) {
     if (this.options.rebuildUrl && req.url === this.options.rebuildUrl && req.method === 'POST') {
+      const token = req.headers['x-11ty-rebuild-token'];
+      if (token !== this.options.rebuildUrlToken) {
+        res.writeHead(403, { 'Content-Type': 'text/plain' });
+        return res.end('Forbidden');
+      }
+
       this.eventBus.emit('eleventyDevServer.rebuild');
       res.writeHead(200);
       return res.end();
